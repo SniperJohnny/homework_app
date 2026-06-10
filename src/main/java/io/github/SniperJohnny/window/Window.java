@@ -4,6 +4,14 @@ import javax.swing.*;
 import java.awt.Color;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
 
 
 public class Window extends JFrame {
@@ -59,20 +67,60 @@ public class Window extends JFrame {
         new Teacher_window();
     }
     private void handleLogin() {
+        String username = enter_name_field.getText();
+        String password = new String(enter_password_field.getPassword());
 
-            String username = enter_name_field.getText();
-            String password = new String(enter_password_field.getPassword());
+        if (username.equals("Enter Name")) username = "";
+        if (password.equals("Enter Password")) password = "";
 
-            // Ignore placeholder values on submission
-            if (username.equals("Enter Name")) username = "";
-            if (password.equals("Enter Password")) password = "";
+        if (username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter both username and password.", "Login Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-            System.out.println("Login clicked for: " + username);
-            if (password.equalsIgnoreCase("test")) {
-                closeWindow();
-                System.out.println("Credentials correct. Transitioning windows...");
-                System.out.println("it should be closing");
+        // 1. Initialize variables for database info
+        String url = "";
+        String dbUser = "";
+        String dbPass = "";
 
+        // 2. Load properties from the config.properties file
+        Properties prop = new Properties();
+        try (FileInputStream input = new FileInputStream("config.properties")) {
+            prop.load(input);
+
+            url = prop.getProperty("db.url");
+            dbUser = prop.getProperty("db.user");
+            dbPass = prop.getProperty("db.password");
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Could not load configuration file!", "Error", JOptionPane.ERROR_MESSAGE);
+            return; // Stop execution if config file is missing
+        }
+
+        // 3. Use the loaded credentials to connect to your database
+        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
+
+        try (Connection connection = DriverManager.getConnection(url, dbUser, dbPass);
+             PreparedStatement statement = connection.prepareStatement(query)) {
+
+            statement.setString(1, username);
+            statement.setString(2, password);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    System.out.println("Credentials correct. Transitioning windows...");
+                    closeWindow();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Invalid username or password.", "Login Failed", JOptionPane.ERROR_MESSAGE);
+                    enter_password_field.setText("");
+                    enter_password_field.requestFocus();
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Database connection error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
    // --- Helper Method for Normal Text Field Placeholder ---
