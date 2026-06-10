@@ -13,7 +13,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
-
 public class Window extends JFrame {
 
     private JTextField enter_name_field;
@@ -32,16 +31,12 @@ public class Window extends JFrame {
 
         int centeredX = fieldHeight - (componentWidth/2);
 
-
-
-
         //JTextField for user input
+        JLabel login_label = new JLabel("Login für Hausaufgabenbelohnung");
+        login_label.setBounds(centeredX, 80, componentWidth, componentHeight);
         enter_name_field = new JTextField();
         enter_name_field.setBounds(centeredX, 150, componentWidth, componentHeight);
         addPlaceholder(enter_name_field, "Enter Name");
-
-
-
 
         enter_password_field = new JPasswordField();
         enter_password_field.setBounds(centeredX, 220, componentWidth, componentHeight);
@@ -52,6 +47,7 @@ public class Window extends JFrame {
         button.setBounds(centeredX,300, componentWidth, componentHeight);
 
         this.add(button);
+        this.add(login_label);
         this.add(enter_name_field);
         this.add(enter_password_field);
 
@@ -59,13 +55,14 @@ public class Window extends JFrame {
         enter_name_field.addActionListener(e -> handleLogin());
         enter_password_field.addActionListener(e -> handleLogin());
 
-
         this.setVisible(true);
     }
-    private void closeWindow() {
+
+    private void closeWindow(String username, int points, String role) {
         this.dispose();
-        new Teacher_window();
+        new Teacher_window(username, points, role);
     }
+
     private void handleLogin() {
         String username = enter_name_field.getText();
         String password = new String(enter_password_field.getPassword());
@@ -78,39 +75,42 @@ public class Window extends JFrame {
             return;
         }
 
-        // 1. Initialize variables for database info
+        String hashedInputPassword = hashSHA256(password);
+
         String url = "";
         String dbUser = "";
         String dbPass = "";
 
-        // 2. Load properties from the config.properties file
         Properties prop = new Properties();
         try (FileInputStream input = new FileInputStream("config.properties")) {
             prop.load(input);
-
             url = prop.getProperty("db.url");
             dbUser = prop.getProperty("db.user");
             dbPass = prop.getProperty("db.password");
 
+            System.out.println("--- FILE FOUND! ---");
+            System.out.println("Loaded URL: " + url);
         } catch (IOException ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Could not load configuration file!", "Error", JOptionPane.ERROR_MESSAGE);
-            return; // Stop execution if config file is missing
+            JOptionPane.showMessageDialog(this, "Could not find file in: " + System.getProperty("user.dir"), "Configuration Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
-        // 3. Use the loaded credentials to connect to your database
-        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
+        String query = "SELECT id, username, role , points FROM user WHERE LOWER(username) = LOWER(?) AND password_hash = ?";
 
         try (Connection connection = DriverManager.getConnection(url, dbUser, dbPass);
              PreparedStatement statement = connection.prepareStatement(query)) {
 
             statement.setString(1, username);
-            statement.setString(2, password);
+            statement.setString(2, hashedInputPassword);
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    System.out.println("Credentials correct. Transitioning windows...");
-                    closeWindow();
+                    String role = resultSet.getString("role");
+                    System.out.println("Login successful! Role: " + role);
+                    int points = resultSet.getInt("points");
+
+                    closeWindow(username, points, role);
                 } else {
                     JOptionPane.showMessageDialog(this, "Invalid username or password.", "Login Failed", JOptionPane.ERROR_MESSAGE);
                     enter_password_field.setText("");
@@ -120,10 +120,27 @@ public class Window extends JFrame {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Database connection error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Database error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-   // --- Helper Method for Normal Text Field Placeholder ---
+
+    private String hashSHA256(String data) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    // --- Helper Method for Normal Text Field Placeholder ---
     private void addPlaceholder(JTextField field, String placeholder) {
         field.setText(placeholder);
         field.setForeground(Color.GRAY);
@@ -174,5 +191,8 @@ public class Window extends JFrame {
                 }
             }
         });
+    }
+    public static void register() {
+
     }
 }

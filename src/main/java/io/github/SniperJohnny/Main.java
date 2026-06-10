@@ -1,5 +1,7 @@
 package io.github.SniperJohnny;
 
+import io.github.SniperJohnny.window.Ha_free_voucher;
+import io.github.SniperJohnny.window.Teacher_window;
 import io.github.SniperJohnny.window.Window;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
@@ -11,6 +13,8 @@ public class Main {
         System.out.println("Hello and welcome!");
 
         new Window();
+        Teacher_window.register();
+        Ha_free_voucher.register();
 
 
     }
