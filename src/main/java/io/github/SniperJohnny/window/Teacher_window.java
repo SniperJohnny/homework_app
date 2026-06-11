@@ -18,7 +18,6 @@ public class Teacher_window extends JFrame {
 
     public Teacher_window(String username, int points, String role) {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setTitle("Teacher Window");
         this.setSize(800, 600);
         this.setLayout(null);
 
@@ -36,12 +35,52 @@ public class Teacher_window extends JFrame {
         points_text.setBounds(centeredX, 150, componentWidth, componentHeight);
         name_chooser.setBounds(centeredX, 150, componentWidth, componentHeight);
         points_inserter.setBounds(centeredX, 220, componentWidth, componentHeight);
+        points_inserter.addActionListener(e -> {
+            handle_point_giving();
+        });
+        name_chooser.addActionListener(e -> {
+            handle_point_giving();
+        });
         button.setBounds(centeredX, 290, componentWidth, componentHeight);
-        JButton ha_free_voucher = new JButton("Hausaufgaben Frei Gutschein");
-        ha_free_voucher.setBounds(centeredX, 290, componentWidth, componentHeight);
+        JButton ha_free_voucher = new JButton("Hausaufgabenfrei Gutschein für 500");
+        ha_free_voucher.setBounds(275, 290, 250, componentHeight);
         ha_free_voucher.addActionListener(e -> {
             this.dispose();
             new Ha_free_voucher();
+
+            String url = "";
+            String dbUser = "";
+            String dbPass = "";
+
+            Properties prop = new Properties();
+            try (FileInputStream input = new FileInputStream("config.properties")) {
+                prop.load(input);
+                url = prop.getProperty("db.url");
+                dbUser = prop.getProperty("db.user");
+                dbPass = prop.getProperty("db.password");
+
+                System.out.println("--- FILE FOUND! ---");
+
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Could not find file in: " + System.getProperty("user.dir"), "Configuration Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String query = "UPDATE user SET points = points + ? WHERE LOWER(username) = LOWER(?)";
+
+            try (Connection connection = DriverManager.getConnection(url, dbUser, dbPass);
+                 PreparedStatement statement = connection.prepareStatement(query)) {
+
+                statement.setInt(1, -500);
+                statement.setString(2, username);
+
+                statement.executeUpdate(); // Führt das Update auf der Datenbank aus!
+
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Datenbankfehler beim Einlösen: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
 
@@ -54,10 +93,12 @@ public class Teacher_window extends JFrame {
         if(role.equals("student")) {
             this.add(points_text);
             this.add(ha_free_voucher);
+            this.setTitle("Student Window");
         } else if(role.equals("teacher")) {
             this.add(name_chooser);
             this.add(points_inserter);
             this.add(button);
+            this.setTitle("Teacher Window");
         }
         ((AbstractDocument) points_inserter.getDocument()).setDocumentFilter(new DocumentFilter() {
             private final Pattern pattern = Pattern.compile("\\d*");
@@ -105,7 +146,6 @@ public class Teacher_window extends JFrame {
             dbPass = prop.getProperty("db.password");
 
             System.out.println("--- FILE FOUND! ---");
-            System.out.println("Loaded URL: " + url);
         } catch (IOException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Could not find file in: " + System.getProperty("user.dir"), "Configuration Error", JOptionPane.ERROR_MESSAGE);

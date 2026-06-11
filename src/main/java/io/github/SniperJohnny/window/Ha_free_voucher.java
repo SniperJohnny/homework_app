@@ -5,7 +5,7 @@ import javax.swing.*;
 public class Ha_free_voucher extends JFrame {
     Ha_free_voucher() {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setTitle("Teacher Window");
+        this.setTitle("Gift Window");
         this.setSize(800, 600);
 
         int fieldWidth = 250;

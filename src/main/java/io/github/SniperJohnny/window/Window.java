@@ -89,7 +89,6 @@ public class Window extends JFrame {
             dbPass = prop.getProperty("db.password");
 
             System.out.println("--- FILE FOUND! ---");
-            System.out.println("Loaded URL: " + url);
         } catch (IOException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Could not find file in: " + System.getProperty("user.dir"), "Configuration Error", JOptionPane.ERROR_MESSAGE);
